@@ -1,0 +1,37 @@
+var point p;
+var point p2;
+var int x;
+
+class point {
+  attribute int x;
+  attribute int y;
+
+  method void constructor(int a, int b) {
+    this.x = a;
+    this.y = b;
+    
+  }
+  method int somme() {
+
+    return this.x + this.y;
+  }
+
+
+}
+
+main {
+  p = new point(2, 1);
+  p2 = new point (2,1);
+  p.x = 3 + p.x;
+  
+
+  print(48 + p.somme());
+
+  // montrer l'egalité physique
+  /*if(p == p2){
+    print (1);
+  }else{
+    print(0);
+  }*/
+  // affiche 54
+}
