@@ -13,24 +13,54 @@ and obj = {
 exception Error of string
 exception Return of value
 
+
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
   List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
 
+  let get_class cn = 
+    List.find (fun class_d -> class_d.class_name = cn) p.classes 
+  in
+
+  (* 
+- recupere tous les attributs d'un objet avec ceux hérités
+- On remonte jusqu'a la classe la plus haute dans la hiearchie avant de 
+commencer à ajouter, comme ça si y'a les même nom d'attributs entre une classe
+mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en dernier
+*)
+  let rec set_All_fields fields class_def = 
+    match class_def.parent with 
+    None -> List.iter (fun (att,_) -> Hashtbl.add fields att Null) class_def.attributes;
+    |Some cn ->
+      let c = get_class cn in
+      set_All_fields fields c;
+      List.iter (fun (att,_) -> Hashtbl.add fields att Null) class_def.attributes;
+    in
+  
+    (*retourne la premiere methode rencontré lors de la 
+    remonté de la hiéarchie des classes*)
+  let rec get_method class_def f = 
+    try 
+      List.find (fun meth_d -> meth_d.method_name = f) class_def.methods
+    with 
+    |Not_found -> 
+      (match class_def.parent with 
+      Some cn -> get_method (get_class cn) f
+      |_-> raise (Error "definition de methode introuvable (pas normal)"))
+  in
+
   let rec eval_call f this args =
-    let c = List.find (fun class_d -> class_d.class_name = this.cls) p.classes in
-    let meth = List.find (fun meth_d -> meth_d.method_name = f) c.methods in
+    let c = (get_class this.cls) in
+    let meth = get_method c f in
 
     let lenv = Hashtbl.create 16 in
     Hashtbl.add lenv "this" (VObj this);
-    (*ajout des parametre dans l'espace locale*)
+    (*ajout des parametre dans l'espace local*)
     List.iter2 (fun (par, _) v  -> Hashtbl.add lenv par v) meth.params args;
     (*ajout des vars locals dans *)
     List.iter (fun (par, _) -> Hashtbl.add lenv par Null) meth.locals;
 
     exec_seq meth.code lenv;
-
-  
 
   and exec_seq s lenv =
     (let rec evali e = match eval e with
@@ -83,25 +113,30 @@ let exec_prog (p: program): unit =
             )
           |Field(eo,att) -> 
             let obj = evalo eo in
+            (*!!!!!!!!!!*)
             Hashtbl.find obj.fields att
             
         )
       | This -> Hashtbl.find lenv "this"
       | New cn -> 
-        let c = List.find (fun class_d -> class_d.class_name = cn) p.classes in
+        (*1111111*)
+        (*** UNe possibilité d'appeler le constructeur des classes sup ?*)
+        let c = get_class cn in
         let fields = Hashtbl.create 16 in
-        List.iter (fun (att,_) -> Hashtbl.add fields att Null) c.attributes;
+        set_All_fields fields c;
         VObj ({cls=c.class_name; fields=fields})
         
       | NewCstr (cn, el) -> 
-        let c = List.find (fun class_d -> class_d.class_name = cn) p.classes in
+        (*111111111*)
+        let c = get_class cn in
         let fields = Hashtbl.create 16 in
-        List.iter (fun (att,_) -> Hashtbl.add fields att Null) c.attributes;
+        set_All_fields fields c;
 
         eval_call "constructor" {cls=c.class_name; fields=fields} (List.map (fun e -> eval e) el);
         VObj ({cls=c.class_name; fields=fields})
         
       | MethCall (e, s, el) -> 
+        (*11111111*)
         (try 
           eval_call s (evalo e) (List.map (fun e -> eval e) el);
           Null
@@ -124,7 +159,8 @@ let exec_prog (p: program): unit =
             else
               Hashtbl.replace env s ve 
               
-          |Field(eo,s) -> 
+          |Field(eo,s) ->
+            (***********) 
             let obj = evalo eo in 
             Hashtbl.replace obj.fields s (eval e) 
         )

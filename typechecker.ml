@@ -3,7 +3,7 @@ open Kawa
 exception Error of string
 let error s = raise (Error s)
 let type_error ty_actual ty_expected =
-  error (Printf.sprintf "expected %s, got %s"
+  error (Printf.sprintf "expected %s or subtyp, got %s"
            (typ_to_string ty_expected) (typ_to_string ty_actual))
 
 module Env = Map.Make(String)
@@ -37,25 +37,65 @@ let get_class (l: class_def list) (class_name:string): class_def =
   with 
     |Not_found -> error "Classe non definie"
 
-(* Vérifie que la liste des expressions el s'évalue de manière compatible avec le type demandé des parametres*)
-let for_all_params (el:expr list) (params_types: (string * typ) list) (type_expr:expr -> typ Env.t -> typ) (tenv:typ Env.t) : unit = 
-  let t_exepec = ref TVoid in
-  let t_act = ref TVoid in
-
-  try
-    ( if not( List.for_all2 (fun e (_,t) ->
-        let t' = type_expr e tenv in
-        t_act := t';
-        t_exepec := t;
-        t' = t
-      ) el params_types ) then type_error !t_act !t_exepec)
-  with 
-  |Invalid_argument _-> error "Vous n'avez pas mit le bon nombre d'arguments"
-
-
 
 let typecheck_prog p =
   let tenv = add_env p.globals Env.empty in
+
+    (* Vérifie que la liste des expressions el s'évalue de manière compatible avec le type demandé des parametres*)
+  let rec for_all_params (el:expr list) (params_types: (string * typ) list) (type_expr:expr -> typ Env.t -> typ) (tenv:typ Env.t) : unit = 
+    let t_exepec = ref TVoid in
+    let t_act = ref TVoid in
+    (*
+    il faut que les el soit des sous type de params
+    *)
+    try
+      ( if not( List.for_all2 (fun e (_,t) ->
+          let t' = type_expr e tenv in
+          t_act := t';
+          t_exepec := t;
+          est_sous_type t' t
+        ) el params_types ) then type_error !t_act !t_exepec)
+    with 
+    |Invalid_argument _-> error "Vous n'avez pas mit le bon nombre d'arguments"
+
+  (* vérifie que t1 est sous type de t2  *)
+  and est_sous_type t1 t2 = 
+    if (t1=t2) then true
+    else
+      (match t1,t2 with
+
+      TClass cn1, TClass cn2 ->
+        let c1 = get_class p.classes cn1 in
+        (match c1.parent with
+        Some parent_name -> est_sous_type (TClass parent_name) t2
+        |None -> false)
+
+      |_-> false
+      )
+  in
+
+  (*retourne la premiere methode rencontré lors de la 
+    remonté de la hiéarchie des classes*)
+  let rec get_method class_def f = 
+      try 
+        List.find (fun meth_d -> meth_d.method_name = f) class_def.methods
+      with 
+      |Not_found -> 
+        (match class_def.parent with 
+        Some cn -> get_method (get_class p.classes cn) f
+        |None-> raise (Error "Methode inexistante"))
+    in
+
+  let rec get_attr class_def s = 
+      try 
+        let (_,t) =  List.find (fun (att, typ) -> att=s ) class_def.attributes in
+        t
+      with 
+      |Not_found -> 
+        (match class_def.parent with 
+        Some cn -> get_attr (get_class p.classes cn) s
+        |None-> raise (Error "Attribut inexistant"))
+    in
 
   let typ_expected_bop bop = 
     match bop with 
@@ -135,13 +175,11 @@ let typecheck_prog p =
     | MethCall(e,s,el) ->
       (match(type_expr e tenv) with
         |TClass classe_name -> 
-          (try 
-            let meth = List.find (fun m -> m.method_name=s) (get_class p.classes classe_name).methods in
-            for_all_params el (meth.params) type_expr tenv;
-            meth.return
-          with
-          |Not_found-> error "Methode inexistante"
-          )
+          
+          let meth = get_method (get_class p.classes classe_name) s in
+          for_all_params el (meth.params) type_expr tenv;
+          meth.return
+
         |_ -> error "Appel de methode sur non-objet"
       )
 
@@ -157,12 +195,7 @@ let typecheck_prog p =
       (match (type_expr e tenv) with
         TClass class_name -> 
           let c = get_class p.classes class_name in
-          (try 
-            let (_,t) =  List.find (fun (att, typ) -> att=s ) c.attributes in
-            t
-          with
-            |Not_found -> error "Attribut innexistant")
-      
+          get_attr c s
         |_ -> error "Acces attribut pour type qui n'est pas un objet"
       )
   in
@@ -180,9 +213,7 @@ let typecheck_prog p =
       let te = type_expr e tenv in 
       let t = type_mem_access mem_acc tenv in
 
-      (* maintenant on teste l'égalité stricte mais après faut voir
-      si c'est un sous type avec l'héritage*)
-      if te <> t then type_error te t
+      if not(est_sous_type te t) then type_error te t
     | If(e, s1, s2) -> 
       check e TBool tenv;
       check_seq s1 ret  tenv;
