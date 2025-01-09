@@ -3,6 +3,7 @@ open Kawa
 type value =
   | VInt  of int
   | VBool of bool
+  | VArray of value array
   | VObj  of obj
   | Null
 and obj = {
@@ -72,6 +73,9 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
     and evalo e = match eval e with
       | VObj o -> o
       | _ -> assert false
+    and evalA e = match eval e with
+    | VArray arr -> arr
+    | _ -> assert false
 
     and eval (e: expr): value = match e with
       | Int n  -> VInt n
@@ -105,7 +109,7 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
         )
       | Get (mem_acc) -> 
         (match mem_acc with 
-          Var id -> 
+           Var id -> 
             (try 
               Hashtbl.find lenv id
             with
@@ -115,7 +119,10 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
             let obj = evalo eo in
             (*!!!!!!!!!!*)
             Hashtbl.find obj.fields att
-            
+          |Arr(e1,e2) -> 
+              let i = evali e2 in
+              let arr = evalA e1 in
+              arr.(i) 
         )
       | This -> Hashtbl.find lenv "this"
       | New cn -> 
@@ -142,6 +149,19 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
           Null
         with 
           |Return v -> v)
+
+      | ArrayNelts (t,e) -> 
+        let n = evali e in
+        (match t with 
+          TInt -> VArray (Array.make n (VInt 0))
+          |TBool -> VArray (Array.make n (VBool false))
+          |TClass cn -> VArray (Array.make n (VObj {cls=cn;fields=Hashtbl.create 0}))
+          |TArray t' -> failwith "pas encore traite tab de tab"
+          |TVoid -> failwith " ne doit pas arriver"
+        )
+      | ArrayList l -> 
+        VArray(Array.of_list (List.map (eval) l))
+
     
     in
   
@@ -163,6 +183,10 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
             (***********) 
             let obj = evalo eo in 
             Hashtbl.replace obj.fields s (eval e) 
+          |Arr(e1,e2) -> 
+            let i = evali e2 in
+            let arr = evalA e1 in
+            arr.(i) <- ve
         )
       | If(e, s1, s2) -> 
         if(evalb e) then 

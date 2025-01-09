@@ -12,7 +12,7 @@
 %token MINUS PLUS MUL DIV MOD
 %token NEG EQUAL NEQ LT LE GT GE AND OR TRUE FALSE
 %token ASSIGN PRINT VAR ATTRIBUTE METHOD CLASS EXTENDS NEW THIS IF ELSE
-%token WHILE RETURN TINT TBOOL TVOID
+%token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK
 %token EOF
 
 %left OR
@@ -75,7 +75,7 @@ method_def:
 ;
 
 var_decl:
-| VAR tho=types id=IDENT SEMI     {id, tho}
+| VAR tho=types id=IDENT SEMI     {(id, tho)}
 
 ;
 
@@ -89,7 +89,9 @@ types:
 |TVOID                       { TVoid }
 |TINT                        { TInt }
 |TBOOL                       { TBool }
+|t=types LBRACK  RBRACK      { TArray t}
 |id=IDENT                    { TClass id }
+;
 
 instruction:
 |PRINT LPAR e=expression RPAR SEMI                    { Print(e) }
@@ -108,6 +110,7 @@ seq_instr:
 mem:  
 |id=IDENT                                         { Var(id) }
 |e=expression DOT id=IDENT                        { Field(e, id) }
+|e1=expression LBRACK e2=expression RBRACK        { Arr (e1,e2) }
 
 expression:
 | n=INT                                           { Int(n) }
@@ -121,6 +124,9 @@ expression:
 | LPAR e=expression RPAR                          { e }
 | u=uop e=expression                              { Unop (u, e) } %prec OPP  
 | e1=expression b=bop e2=expression               { Binop (b, e1, e2) }
+// je m'inspire de java, je veut pas imposer un autre mot clé comme Array(3) 
+| NEW t=types LBRACK e=expression RBRACK          { ArrayNelts (t, e) }
+| LBRACK l=seq_expr RBRACK                        { ArrayList l }
 
 seq_expr:
 | e=expression COMMA se=seq_expr                  { e::se }

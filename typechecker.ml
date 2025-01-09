@@ -182,7 +182,19 @@ let typecheck_prog p =
 
         |_ -> error "Appel de methode sur non-objet"
       )
-
+    | ArrayNelts (t,e) -> 
+      (**!!!!!!! traite le cas TVoid 
+      !!! traite le cas ou t'intialise par une liste il faut refuser
+      ça quand on a deja fait un new*)
+      check e TInt tenv;
+      TArray t
+    | ArrayList l -> 
+      let first_type = (match l with 
+                        |[] -> error "init de tableau avec une liste vide d'elements"
+                        |e::tl -> type_expr e tenv
+      ) in
+      List.iter (fun e -> check e (type_expr e tenv) tenv) l;
+      TArray first_type
 
   and type_mem_access m tenv = match m with
     | Var s -> 
@@ -198,6 +210,14 @@ let typecheck_prog p =
           get_attr c s
         |_ -> error "Acces attribut pour type qui n'est pas un objet"
       )
+
+    | Arr (e1,e2) -> 
+      (match (type_expr e1 tenv) with 
+        TArray t -> check e2 TInt tenv; t
+        |_ -> error " e n'est pas un tableau dans e.[n]"
+      )
+
+
   in
 
   let rec check_instr i ret tenv = match i with

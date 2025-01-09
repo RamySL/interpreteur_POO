@@ -8,12 +8,14 @@ type typ =
   | TVoid
   | TInt
   | TBool
+  | TArray of typ
   | TClass of string
 
 let typ_to_string = function
   | TVoid    -> "void"
   | TInt     -> "int"
   | TBool    -> "bool"
+  | TArray t  -> "array"
   | TClass c -> c
 
 type unop  = Opp | Not
@@ -37,11 +39,18 @@ type expr =
   | NewCstr  of string * expr list
   (* Appel de méthode *)
   | MethCall of expr * string * expr list
+  (*structures*)
+  (* si l'utilisateur ne saisie pas de nombre d'elt pour le tableau 
+  alors un tableau à taille dynamique sera créer *)
+  | ArrayNelts of typ * expr  
+  | ArrayList of expr list    
+
 
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =
   | Var   of string
   | Field of expr (* objet *) * string (* nom d'un attribut *)
+  | Arr of expr * expr (*t[1]*)
 
 (* Instructions *)
 type instr =
@@ -56,6 +65,7 @@ type instr =
   | Return of expr
   (* Expression utilisée comme instruction *)
   | Expr   of expr
+  
 
 and seq = instr list
 
