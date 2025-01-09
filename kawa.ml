@@ -11,11 +11,19 @@ type typ =
   | TArray of typ
   | TClass of string
 
+let rec string_array t = 
+  match t with 
+  |TVoid -> ""                     
+  |TInt  -> "array of int"
+  |TBool -> "array of int"
+  |TClass cn -> Printf.sprintf "array of class %s" cn  
+  |TArray t' -> "array of " ^ string_array t'
+
 let typ_to_string = function
   | TVoid    -> "void"
   | TInt     -> "int"
   | TBool    -> "bool"
-  | TArray t  -> "array"
+  | TArray t  -> string_array t
   | TClass c -> c
 
 type unop  = Opp | Not
@@ -42,15 +50,15 @@ type expr =
   (*structures*)
   (* si l'utilisateur ne saisie pas de nombre d'elt pour le tableau 
   alors un tableau à taille dynamique sera créer *)
-  | ArrayNelts of typ * expr  
+  | ArrayNelts of typ * expr list 
   | ArrayList of expr list    
 
-
+(* un type qui contient si le tableau à été init, et une liste des dimension*)
 (* Accès mémoire : variable ou attribut d'un objet *)
 and mem_access =
   | Var   of string
   | Field of expr (* objet *) * string (* nom d'un attribut *)
-  | Arr of expr * expr (*t[1]*)
+  | Arr of expr * expr list (*t[1]*)
 
 (* Instructions *)
 type instr =

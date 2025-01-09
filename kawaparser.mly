@@ -83,14 +83,18 @@ params:
 | t=types id=IDENT COMMA p=params { (id,t)::p }
 | t=types id=IDENT                { [(id,t)] }
 |                                 { [] }
+;
 
-
-types:
+types_prim:
 |TVOID                       { TVoid }
 |TINT                        { TInt }
 |TBOOL                       { TBool }
-|t=types LBRACK  RBRACK      { TArray t}
 |id=IDENT                    { TClass id }
+;
+
+types:
+|t=types_prim                { t }
+|t=types LBRACK  RBRACK      { TArray t}
 ;
 
 instruction:
@@ -108,9 +112,10 @@ seq_instr:
 |                           { [] }
 
 mem:  
-|id=IDENT                                         { Var(id) }
-|e=expression DOT id=IDENT                        { Field(e, id) }
-|e1=expression LBRACK e2=expression RBRACK        { Arr (e1,e2) }
+|id=IDENT                                                         { Var(id) }
+|e=expression DOT id=IDENT                                        { Field(e, id) }
+// pour regler le conflit avec reduce|reduce avec : NEW id=IDENT, on rajoute le DOT
+|e1=expression DOT LBRACK e=expression RBRACK le=list(seq_index)  { Arr (e1,e::le) }
 
 expression:
 | n=INT                                           { Int(n) }
@@ -125,8 +130,12 @@ expression:
 | u=uop e=expression                              { Unop (u, e) } %prec OPP  
 | e1=expression b=bop e2=expression               { Binop (b, e1, e2) }
 // je m'inspire de java, je veut pas imposer un autre mot clé comme Array(3) 
-| NEW t=types LBRACK e=expression RBRACK          { ArrayNelts (t, e) }
+| NEW LBRACK RBRACK t=types_prim le=list(seq_index){ ArrayNelts (t, le) } 
 | LBRACK l=seq_expr RBRACK                        { ArrayList l }
+;
+// pour int[5]
+seq_index:
+LBRACK e=expression RBRACK                        { e }
 
 seq_expr:
 | e=expression COMMA se=seq_expr                  { e::se }

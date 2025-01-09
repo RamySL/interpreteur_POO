@@ -3,7 +3,7 @@ open Kawa
 type value =
   | VInt  of int
   | VBool of bool
-  | VArray of value array
+  | VArray of value array 
   | VObj  of obj
   | Null
 and obj = {
@@ -14,6 +14,38 @@ and obj = {
 exception Error of string
 exception Return of value
 
+
+
+(* implementation des tableau :
+  la précondition de la fonction dont on sait qu'elle est vérifié à travers 
+  le typecheker c'est on aura pas TVOid à traiter et la liste vide aussi
+  ne va pas apparaitre, et aussi que si il ya un seul element dans la liste
+  alors le type fait partie de ceux des type dit primitif (ça c'est l'analyse syntaxique qui l'assure)
+  et si il ya plusieurs elements dans la liste alors on fait forcément sur un TArray
+*)
+let rec create_array t_prim ln = 
+  
+  match ln with 
+  [] -> failwith "N'est jamais censé arriver (traité au typechecker)"
+  |[n] -> 
+    (match t_prim with 
+    TInt -> VArray (Array.make (n) (VInt 0))
+    |TBool -> VArray (Array.make (n) (VBool false))
+    |TClass cn -> VArray (Array.make (n) (VObj {cls=cn;fields=Hashtbl.create 0}))
+    |_ -> failwith "N'est jamais censé arriver (traité au typechecker)"
+    )
+  |n:: tl ->
+    VArray (Array.init (n) (fun _-> create_array t_prim tl))
+
+
+(* retourne par exemple pour un accès t[0][5] la ligne 0 (mais pas l'accès au 5eme) 
+et le dernier indice (5)*)
+let rec get_index li array = 
+  match li,array with 
+  |[],_ -> failwith "N'est jamais censé arriver (traité au typechecker)"
+  |[i],VArray array -> array,i
+  |i::tl, VArray array -> get_index tl array.(i)
+  |_-> failwith "N'est jamais censé arriver (traité au typechecker)"
 
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
@@ -119,10 +151,10 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
             let obj = evalo eo in
             (*!!!!!!!!!!*)
             Hashtbl.find obj.fields att
-          |Arr(e1,e2) -> 
-              let i = evali e2 in
-              let arr = evalA e1 in
-              arr.(i) 
+          |Arr(e1,le) -> 
+            let li = List.map (evali) le in
+            let arr,i = get_index li (eval e1) in
+            arr.(i) 
         )
       | This -> Hashtbl.find lenv "this"
       | New cn -> 
@@ -150,18 +182,11 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
         with 
           |Return v -> v)
 
-      | ArrayNelts (t,e) -> 
-        let n = evali e in
-        (match t with 
-          TInt -> VArray (Array.make n (VInt 0))
-          |TBool -> VArray (Array.make n (VBool false))
-          |TClass cn -> VArray (Array.make n (VObj {cls=cn;fields=Hashtbl.create 0}))
-          |TArray t' -> failwith "pas encore traite tab de tab"
-          |TVoid -> failwith " ne doit pas arriver"
-        )
+      | ArrayNelts (t,le) -> 
+        let ln = List.map (evali) le in
+        create_array t ln
       | ArrayList l -> 
         VArray(Array.of_list (List.map (eval) l))
-
     
     in
   
@@ -183,10 +208,11 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
             (***********) 
             let obj = evalo eo in 
             Hashtbl.replace obj.fields s (eval e) 
-          |Arr(e1,e2) -> 
-            let i = evali e2 in
-            let arr = evalA e1 in
+          |Arr(e1,le) -> 
+            let li = List.map (evali) le in
+            let arr,i = get_index li (eval e1) in
             arr.(i) <- ve
+
         )
       | If(e, s1, s2) -> 
         if(evalb e) then 

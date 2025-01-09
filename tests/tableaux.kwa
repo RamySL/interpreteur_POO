@@ -1,10 +1,29 @@
-var int [] t;
+var int[][] t;
+var int i;
+var int j;
 
 main {
-    /*t = new int [5];
-    t[0] = 16;*/
+    t= new[] int [4][5];
+        
+    i = 0;
+    j = 0;
+    while(i<4){
+        while(j<5){
+            t.[i][j] = i*j;
+            j = j + 1;
+        }
+    j=0;
+    i=i+1;
+    }
+    i=0;
+    j=0;
+    while(i<4){
+        while(j<5){
+            print (t.[i][j]);
+            j = j + 1;
+        }
+    j=0;
+    i=i+1;
+    }
 
-    t=[1,2,3,4,5];
-    
-    print(t[4]);
 }

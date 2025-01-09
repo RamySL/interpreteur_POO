@@ -37,7 +37,47 @@ let get_class (l: class_def list) (class_name:string): class_def =
   with 
     |Not_found -> error "Classe non definie"
 
+(* Pour verifier qu'on a pas declaré un tableau de void*)
+let rec est_arr_void t = 
+  match t with 
+  TVoid -> true
+  |TArray t' -> est_arr_void t'
+  |_ -> false
 
+(* rend la dimesion du tableau déclaré 
+- new[] int [][][] : rend 3
+*)
+let dimension_array t = 
+
+  let rec aux t acc = 
+    match t with 
+    |TArray t' -> aux t' (acc+1)
+    |_ ->  acc
+  in
+
+  aux t 1
+(*
+- POur recuperer le type recursif des tableaux multidimension
+parceque dans la syntaxe on a que le type primtif avec new.
+
+avec int [1][2] on recupere : TArray (TArray int) 
+*)
+let rec get_recTyp_from_ArrayDecl n prim_type = 
+
+  if (n = 1) then 
+    TArray prim_type
+  else
+    TArray (get_recTyp_from_ArrayDecl (n-1) prim_type)
+(*
+- Recupere le type de la nieme dimension dans le tableau
+*)
+let rec get_nth_dim_typ t n = 
+  if (n=1) then 
+    t
+  else
+    match t with 
+    |TArray t' -> get_nth_dim_typ t' (n-1)
+    |_ -> error "probleme tableau !!" (* pas censé arrivé *)
 let typecheck_prog p =
   let tenv = add_env p.globals Env.empty in
 
@@ -182,18 +222,23 @@ let typecheck_prog p =
 
         |_ -> error "Appel de methode sur non-objet"
       )
-    | ArrayNelts (t,e) -> 
-      (**!!!!!!! traite le cas TVoid 
+    | ArrayNelts (t,le) -> 
+      (**!!!!!!!  
       !!! traite le cas ou t'intialise par une liste il faut refuser
       ça quand on a deja fait un new*)
-      check e TInt tenv;
-      TArray t
+
+      if(est_arr_void t) then error "void n'est pas un type valide pour element de tableaux"
+      else
+        let dim_saisie = ref 0 in
+        List.iter (fun e -> check e TInt tenv; dim_saisie := (!dim_saisie)+1) le;
+        get_recTyp_from_ArrayDecl !dim_saisie t
+      
     | ArrayList l -> 
       let first_type = (match l with 
                         |[] -> error "init de tableau avec une liste vide d'elements"
                         |e::tl -> type_expr e tenv
       ) in
-      List.iter (fun e -> check e (type_expr e tenv) tenv) l;
+      List.iter (fun e -> check e first_type tenv) l;
       TArray first_type
 
   and type_mem_access m tenv = match m with
@@ -211,9 +256,15 @@ let typecheck_prog p =
         |_ -> error "Acces attribut pour type qui n'est pas un objet"
       )
 
-    | Arr (e1,e2) -> 
+    | Arr (e1,le) -> 
       (match (type_expr e1 tenv) with 
-        TArray t -> check e2 TInt tenv; t
+        TArray t ->
+          let dim_saisie = ref 0 in
+          List.iter (fun e -> check e TInt tenv; dim_saisie := (!dim_saisie)+1) le;
+
+          if(!dim_saisie > dimension_array t) then error "acces a une dimension innexistante de tableau"
+          else 
+            get_nth_dim_typ t !dim_saisie
         |_ -> error " e n'est pas un tableau dans e.[n]"
       )
 
@@ -232,7 +283,8 @@ let typecheck_prog p =
     | Set(mem_acc, e) ->
       let te = type_expr e tenv in 
       let t = type_mem_access mem_acc tenv in
-
+      (* il faut parcourir recursivement pour afficher une erreur correct, 
+      comme expexted array of array got array*)
       if not(est_sous_type te t) then type_error te t
     | If(e, s1, s2) -> 
       check e TBool tenv;

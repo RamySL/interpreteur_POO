@@ -1,5 +1,6 @@
 
 var paire p;
+var int p;
 var paire pt;
 var triple t;
 
