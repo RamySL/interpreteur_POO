@@ -3,6 +3,11 @@
   open Lexing
   open Kawa
 
+    (* transforme la liste de listes capturée par list(var_decl) en (string,types)list *)
+  let lDeL2L l = 
+    (* utilisation plus optimisé de @ parceque on part de la droite *)
+    List.fold_right (@) l []
+
 %}
 
 %token <int> INT
@@ -31,8 +36,10 @@
 
 program:
 | globals=list(var_decl) classes=list(class_def) MAIN BEGIN main=list(instruction) END EOF
-    { {classes; globals; main} }
-;
+    {let globals = lDeL2L globals in
+     {classes; globals; main} 
+     }
+; 
 
 class_def:
 | CLASS id=IDENT pr=parent BEGIN 
@@ -40,6 +47,7 @@ class_def:
     meths=list(method_def)
   END 
   {
+    let atts = lDeL2L atts in
     {
       class_name = id;
       attributes = atts;
@@ -55,28 +63,45 @@ parent:
 ;
 
 att_decl:
-|  ATTRIBUTE tho=types id=IDENT SEMI { id, tho }
+|  ATTRIBUTE t=types id=IDENT l_decl=att_decl_multiple SEMI 
+{
+  List.map (fun id -> (id, t))  (id::l_decl)
+}
+;
+
+att_decl_multiple:
+|                                          { [] }
+| COMMA id=IDENT l_decl=att_decl_multiple  { id::l_decl }
 ;
 
 method_def:
-| METHOD tho=types id=IDENT LPAR params=params RPAR BEGIN
+| METHOD t=types id=IDENT LPAR params=params RPAR BEGIN
   locals=list(var_decl)
   code=list(instruction)
  END 
  {
+  let locals = lDeL2L locals in
   {
     method_name = id;
     code = code;
     params = params;
     locals = locals;
-    return = tho;
+    return = t;
   }
  }
 ;
 
-var_decl:
-| VAR tho=types id=IDENT SEMI     {(id, tho)}
 
+var_decl:
+| VAR t=types id=IDENT l_decl=var_decl_multiple SEMI 
+{
+  List.map (fun id -> (id, t))  (id::l_decl)
+}
+;
+
+var_decl_multiple:
+|                                          { [] }
+| COMMA id=IDENT l_decl=var_decl_multiple  { id::l_decl }
 ;
 
 params:

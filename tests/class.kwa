@@ -1,5 +1,4 @@
-var point a;
-var point b;
+var point a,b,c;
 
 class point {
   attribute int x;
