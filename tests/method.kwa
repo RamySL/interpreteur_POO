@@ -1,5 +1,4 @@
-var point p;
-var point p2;
+var point p,p2;
 var int x;
 
 class point {

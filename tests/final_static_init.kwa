@@ -1,0 +1,33 @@
+/* tests de final, initialisation à la déclaration, et static */
+
+var point p1,p2;
+var int x=5;
+
+class point {
+  attribute int x = 10;
+  attribute final int y, z=15/3;
+
+  method void constructor(int a, int b) {
+    this.x = a;
+    this.y = b;
+    
+  }
+  method int somme() {
+    //this.y = 10; //erreur
+    return this.x + this.y;
+  }
+
+
+}
+
+main {
+  p1 = new point(2, 1);
+  p2 = new point (2,1);
+  p1.x = 3 + p1.y;
+  //p1.y = 58; //erreur
+  
+  print(48 + p1.somme());
+  //affiche 53
+  print (p1.z);
+  //affiche 5
+}

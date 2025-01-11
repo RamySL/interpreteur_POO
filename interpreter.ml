@@ -49,26 +49,54 @@ let rec get_index li array =
 
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
-  List.iter (fun (x, _) -> Hashtbl.add env x Null) p.globals;
+  let var_init = ref [] in
+  (* Je transforme les var int = 5; à la déclaration en des instruction
+  que je rajoute implicitement aux codes du main *)
+  List.iter( (fun (x, _, e_option) -> 
+    (match e_option with 
+      None -> Hashtbl.add env x Null
+      |Some e -> var_init := (Set(Var x,e))::!var_init 
+      )
+    )
+  ) p.globals;
+  
+  let main_code = (List.rev !var_init) @ p.main in
+  
 
   let get_class cn = 
     List.find (fun class_d -> class_d.class_name = cn) p.classes 
   in
 
   (* 
-- recupere tous les attributs d'un objet avec ceux hérités
-- On remonte jusqu'a la classe la plus haute dans la hiearchie avant de 
-commencer à ajouter, comme ça si y'a les même nom d'attributs entre une classe
-mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en dernier
+  - recupere tous les attributs d'un objet avec ceux hérités
+  - On remonte jusqu'a la classe la plus haute dans la hiearchie avant de 
+  commencer à ajouter, comme ça si y'a les même nom d'attributs entre une classe
+  mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en dernier
 *)
-  let rec set_All_fields fields class_def = 
+  let rec set_All_fields fields class_def eval = 
+    
+    let aux fields class_def = 
+      
+      List.iter (fun (att,_,_,init) ->
+        (match !init with 
+          None -> Hashtbl.add fields att Null;
+          |Some e -> 
+            try 
+              let ve = eval e in
+              Hashtbl.add fields att ve;
+            with
+            _ -> Hashtbl.add fields att Null;
+          )) class_def.attributes;
+    in
+
     match class_def.parent with 
-    None -> List.iter (fun (att,_) -> Hashtbl.add fields att Null) class_def.attributes;
+    None -> aux fields class_def
     |Some cn ->
       let c = get_class cn in
-      set_All_fields fields c;
-      List.iter (fun (att,_) -> Hashtbl.add fields att Null) class_def.attributes;
-    in
+      set_All_fields fields c eval;
+      aux fields class_def
+  in
+
   
     (*retourne la premiere methode rencontré lors de la 
     remonté de la hiéarchie des classes*)
@@ -82,16 +110,24 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
       |_-> raise (Error "definition de methode introuvable (pas normal)"))
   in
 
-  let rec eval_call f this args =
+  let rec eval_call f this args eval =
     let c = (get_class this.cls) in
     let meth = get_method c f in
+
+    let aux lenv = 
+      List.iter (fun (var,_,init) ->
+        (match init with 
+          None -> Hashtbl.add lenv var Null
+          |Some e -> Hashtbl.add lenv var (eval e)
+          )) meth.locals;
+    in
 
     let lenv = Hashtbl.create 16 in
     Hashtbl.add lenv "this" (VObj this);
     (*ajout des parametre dans l'espace local*)
     List.iter2 (fun (par, _) v  -> Hashtbl.add lenv par v) meth.params args;
-    (*ajout des vars locals dans *)
-    List.iter (fun (par, _) -> Hashtbl.add lenv par Null) meth.locals;
+    (*ajout des vars locals dans l'espace local*)
+    aux lenv;
 
     exec_seq meth.code lenv;
 
@@ -105,9 +141,6 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
     and evalo e = match eval e with
       | VObj o -> o
       | _ -> assert false
-    and evalA e = match eval e with
-    | VArray arr -> arr
-    | _ -> assert false
 
     and eval (e: expr): value = match e with
       | Int n  -> VInt n
@@ -148,7 +181,9 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
               |Not_found -> Hashtbl.find env id
             )
           |Field(eo,att) -> 
+            
             let obj = evalo eo in
+            
             (*!!!!!!!!!!*)
             Hashtbl.find obj.fields att
           |Arr(e1,le) -> 
@@ -162,22 +197,23 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
         (*** UNe possibilité d'appeler le constructeur des classes sup ?*)
         let c = get_class cn in
         let fields = Hashtbl.create 16 in
-        set_All_fields fields c;
+        set_All_fields fields c eval;
         VObj ({cls=c.class_name; fields=fields})
         
       | NewCstr (cn, el) -> 
         (*111111111*)
+        
         let c = get_class cn in
         let fields = Hashtbl.create 16 in
-        set_All_fields fields c;
-
-        eval_call "constructor" {cls=c.class_name; fields=fields} (List.map (fun e -> eval e) el);
+        set_All_fields fields c eval;
+        
+        eval_call "constructor" {cls=c.class_name; fields=fields} (List.map (fun e -> eval e) el) eval;
         VObj ({cls=c.class_name; fields=fields})
         
       | MethCall (e, s, el) -> 
         (*11111111*)
         (try 
-          eval_call s (evalo e) (List.map (fun e -> eval e) el);
+          eval_call s (evalo e) (List.map (fun e -> eval e) el) eval;
           Null
         with 
           |Return v -> v)
@@ -187,9 +223,10 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
         create_array t ln
       | ArrayList l -> 
         VArray(Array.of_list (List.map (eval) l))
+      
     
     in
-  
+      
     let rec exec (i: instr): unit = match i with
       | Print e -> Printf.printf "%d\n" (evali e)
       | Expr(e) -> let _ = eval e in () 
@@ -231,8 +268,9 @@ mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en derni
     and exec_seq s = 
       List.iter exec s
     in
-
+    
     exec_seq s)
+    
   in
   
-  exec_seq p.main (Hashtbl.create 1)
+  exec_seq main_code (Hashtbl.create 1)

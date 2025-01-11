@@ -32,39 +32,6 @@ let rec add_env l tenv  est_sous_type type_expr =
       
   ) tenv l
 
-(* gere les attributs : 
-- si un attribut est final et est intialisé on garde cette information dans l'environement (true,true)
-pour pouvoir lever une erreur en cas d'affectation, ou en cas d'oublie d'initialisation 
-let rec add_atts_env l  tenv est_sous_type type_expr =
-    let l' = ref l in
-    List.
-    
-    
-    (fun env (x, t, final, val_init) -> 
-      
-        l' := List.tl !l';
-        (if(List.for_all (fun (x',_,_,_) -> x<>x') !l') then 
-          (match val_init with 
-            |Some e -> 
-              let te = type_expr e tenv (Some env) in 
-              if (est_sous_type te t) then 
-                (if(final) then 
-                  Env.add x (te,true,true) env
-                else
-                  Env.add x (te,false,true) env
-                )
-              else type_error te t
-            |None -> 
-              (if(final) then 
-                Env.add x (t,true,false) env
-              else
-                Env.add x (t,false,false) env
-              )
-          )
-        else
-          raise (Error (Printf.sprintf "duplication dans la declaration de l'attribut %s" x)))
-        
-    )  l*)
 
 let add_class_env l env = 
   List.fold_left (fun env class_def -> 
@@ -323,20 +290,23 @@ let typecheck_prog p =
 
     | Set(mem_acc, e) ->
       let te = type_expr e tenv  in 
-
+      (* On verifie les affectation à un attribut final deja initialisé*)
       let t = (match mem_acc with 
-                Field(e,att) ->
-                  (match  with 
-                    None -> type_mem_access mem_acc tenv  true 
-                    |Some  ->  
-                      try 
-                        let _,_,final,init = Hashtbl.find  att in
-                      with
+                Field(e',att) ->
+                  (match (type_expr e' tenv) with
+                    TClass class_name -> 
+                      let c = get_class p.classes class_name in
+                      let (_,t,final,init) =  get_attr c att in
 
-
-                    )
-
-                |_ -> type_mem_access mem_acc tenv  false 
+                      if(final && (!init) = None) then(
+                        init := Some e;
+                        t
+                      )
+                      else if (final) then error "modification d'un attribut final " 
+                      else  t
+                    |_ -> error "Acces attribut pour type qui n'est pas un objet"
+                  ) 
+                |_ -> type_mem_access mem_acc tenv   
       ) in
       if not(est_sous_type te t) then type_error te t
 
@@ -359,14 +329,14 @@ let typecheck_prog p =
     (* On vérifie que les attributs final non initilisés à la déclaration 
     sont bien initialisés dans le constructeur *)
     let first_method = List.hd c.methods in
-    let finals_non_init_list = List.filter (fun (_,_,final,init)-> final && (init <> None) )  c.attributes in
+    let finals_non_init_list = List.filter (fun (_,_,final,init)-> final && (!init = None) )  c.attributes in
     let len_finals = List.length finals_non_init_list in
 
-    if (len_finals > 0 && first_method.method_name <> "constructor") then
+    (if (len_finals > 0 && first_method.method_name <> "constructor") then
       error "Faite un constructeur pour initialise vos attributs finals 
       ou declarer votre constructeur en premier"
     else
-      if(len_finals > 0) then check_constr_init_finals finals_non_init_list first_method
+      if(len_finals > 0) then check_constr_init_finals finals_non_init_list first_method.code);
         
     List.iter (fun m -> check_mdef m tenv  ) c.methods
     
@@ -385,8 +355,9 @@ let typecheck_prog p =
           List.exists ( fun instr ->
             match instr with 
               Set(Field(obj,att),e) -> obj=This && att=id
+              |_ -> false
           ) code 
-      ) l_finals) then error "attribut(s) final non initilisé"
+      ) l_finals) then error "attribut(s) final non initilise"
     
   
   
@@ -405,7 +376,7 @@ let typecheck_prog p =
         | i :: s -> return_exist i || return_seq s
   in
 
-  let tenv = add_env p.globals Env.empty None est_sous_type type_expr in
+  let tenv = add_env p.globals Env.empty est_sous_type type_expr in
   let tenv = add_class_env p.classes tenv in
   List.iter (fun c_def -> check_class c_def tenv) p.classes;
-  check_seq p.main TVoid tenv None
+  check_seq p.main TVoid tenv 
