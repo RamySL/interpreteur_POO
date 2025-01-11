@@ -86,7 +86,7 @@ type method_def = {
     method_name: string;
     code: seq;
     params: (string * typ) list;
-    locals: (string * typ) list;
+    locals: (string * typ * expr option) list;
     return: typ;
   }
         
@@ -100,7 +100,8 @@ type method_def = {
    paramètre implicite this. *)
 type class_def = {
     class_name: string;
-    attributes: (string * typ) list;
+                (* id    type   final?  val init*)
+    attributes: (string * typ * bool * expr option ref)list; 
     methods: method_def list;
     parent: string option;
   }
@@ -109,6 +110,6 @@ type class_def = {
    d'instructions *)
 type program = {
     classes: class_def list;
-    globals: (string * typ) list;
+    globals: (string * typ * expr option) list;
     main: seq;
   }
