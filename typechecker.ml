@@ -300,7 +300,6 @@ let typecheck_prog p =
 
   let rec check_class c tenv = 
 
-    let tenv = add_env c.attributes tenv in
     let tenv = Env.add "this" (TClass c.class_name) tenv in
     List.iter (fun m -> check_mdef m tenv ) c.methods
     
