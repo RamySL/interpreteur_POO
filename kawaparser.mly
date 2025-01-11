@@ -17,7 +17,7 @@
 %token MINUS PLUS MUL DIV MOD
 %token NEG EQUAL NEQ LT LE GT GE AND OR TRUE FALSE
 %token ASSIGN PRINT VAR ATTRIBUTE METHOD CLASS EXTENDS NEW THIS IF ELSE
-%token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK
+%token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK FINAL STATIC
 %token EOF
 
 %left OR
@@ -64,14 +64,27 @@ parent:
 
 att_decl:
 |  ATTRIBUTE t=types id=IDENT l_decl=att_decl_multiple SEMI 
-{
-  List.map (fun id -> (id, t))  (id::l_decl)
-}
+  {
+    List.map (fun (id,init) -> (id, t, false, init))  ((id, ref None)::l_decl)
+  }
+|  ATTRIBUTE t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
+  {
+    List.map (fun (id,init) -> (id, t, false, init))  ((id, ref (Some e))::l_decl)
+  }
+|  ATTRIBUTE FINAL t=types id=IDENT l_decl=att_decl_multiple SEMI 
+  {
+    List.map (fun (id,init) -> (id, t, true,init))  ((id,ref None)::l_decl)
+  }
+|  ATTRIBUTE FINAL t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
+  {
+    List.map (fun (id,init) -> (id, t, true,init))  ((id,ref (Some e))::l_decl)
+  }
 ;
 
 att_decl_multiple:
-|                                          { [] }
-| COMMA id=IDENT l_decl=att_decl_multiple  { id::l_decl }
+|                                                               { [] }
+| COMMA id=IDENT l_decl=att_decl_multiple                       { (id,ref None)::l_decl }
+| COMMA id=IDENT ASSIGN e=expression l_decl=att_decl_multiple   { (id,ref (Some e))::l_decl }
 ;
 
 method_def:
@@ -95,13 +108,18 @@ method_def:
 var_decl:
 | VAR t=types id=IDENT l_decl=var_decl_multiple SEMI 
 {
-  List.map (fun id -> (id, t))  (id::l_decl)
+  List.map (fun (id,init) -> (id,t,init))  ((id,None)::l_decl)
+}
+| VAR t=types id=IDENT ASSIGN e=expression l_decl=var_decl_multiple SEMI 
+{
+  List.map (fun (id,init) -> (id,t,init))  ((id,Some e)::l_decl)
 }
 ;
 
 var_decl_multiple:
 |                                          { [] }
-| COMMA id=IDENT l_decl=var_decl_multiple  { id::l_decl }
+| COMMA id=IDENT l_decl=var_decl_multiple  { (id,None)::l_decl }
+| COMMA id=IDENT ASSIGN e=expression l_decl=var_decl_multiple  { (id,Some e)::l_decl }
 ;
 
 params:

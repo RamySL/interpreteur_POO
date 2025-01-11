@@ -24,7 +24,9 @@
         "return",RETURN;
         "int", TINT;
         "bool",TBOOL;
-        "void",TVOID
+        "void",TVOID;
+        "final",FINAL;
+        "static", STATIC;
       ] ;
     fun s ->
       try Hashtbl.find h s
