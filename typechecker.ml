@@ -328,15 +328,20 @@ let typecheck_prog p =
     let tenv = Env.add "this" (TClass c.class_name) tenv in
     (* On vérifie que les attributs final non initilisés à la déclaration 
     sont bien initialisés dans le constructeur *)
-    let first_method = List.hd c.methods in
+
     let finals_non_init_list = List.filter (fun (_,_,final,init)-> final && (!init = None) )  c.attributes in
     let len_finals = List.length finals_non_init_list in
 
-    (if (len_finals > 0 && first_method.method_name <> "constructor") then
-      error "Faite un constructeur pour initialise vos attributs finals 
-      ou declarer votre constructeur en premier"
+    (if (len_finals > 0) then
+      (try 
+        (if ((List.hd c.methods).method_name <> "constructor") then 
+            error "Faite un constructeur pour initialise vos attributs finals")
+        with 
+        _ ->  error "Faite un constructeur pour initialise vos attributs finals 
+                ou declarer votre constructeur en premier")
+
     else
-      if(len_finals > 0) then check_constr_init_finals finals_non_init_list first_method.code);
+      if(len_finals > 0) then check_constr_init_finals finals_non_init_list (List.hd c.methods).code);
         
     List.iter (fun m -> check_mdef m tenv  ) c.methods
     
