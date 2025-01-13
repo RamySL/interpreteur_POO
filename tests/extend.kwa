@@ -2,6 +2,7 @@
 var paire p,pt;
 var triple t;
 
+
 class paire {
   attribute int x,y;
 
@@ -33,7 +34,14 @@ class triple extends paire {
   }
 }
 
+class autre extends paire {
+
+}
+
 main {
+  p = new autre; // doit pas lever d'erreur car fils
+  //t = new autre; // doit lever une erreur
+
   p = new paire(1, 2);
   t = new triple(3, 4, 5);
   print(p.somme());

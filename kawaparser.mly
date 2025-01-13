@@ -3,7 +3,8 @@
   open Lexing
   open Kawa
 
-    (* transforme la liste de listes capturée par list(var_decl) en (string,types)list *)
+  (** [lDeL2L l] renvoie une liste de (string,types) à partir de la liste de 
+  liste [l] captrée par list(var_decl)*)
   let lDeL2L l = 
     (* utilisation plus optimisé de @ parceque on part de la droite *)
     List.fold_right (@) l []
@@ -176,7 +177,7 @@ expression:
 | NEW LBRACK RBRACK t=types_prim le=list(seq_index){ ArrayNelts (t, le) } 
 | LBRACK l=seq_expr RBRACK                        { ArrayList l }
 ;
-// pour int[5]
+
 seq_index:
 LBRACK e=expression RBRACK                        { e }
 

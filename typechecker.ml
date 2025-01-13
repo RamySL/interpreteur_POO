@@ -10,52 +10,58 @@ module Env = Map.Make(String)
 
 type tenv = typ Env.t
                  
-
-(* version modfiée de celle du squelette, verifie qu'il n'ya pas
-de duplication dans les déclaration et verfie le type de valeur avec laquelle 
-on initialise une variable*)
-let rec add_env l tenv  est_sous_type type_expr =
-  let l' = ref l in
-  List.fold_left (fun env (x, t, val_init) -> 
-    
-      l' := List.tl !l';
-      (if(List.for_all (fun (x',_,_) -> x<>x') !l') then 
-        (match val_init with 
-          |Some e -> 
-            let te = type_expr e tenv in 
-            if (est_sous_type te t) then Env.add x te env
-            else type_error te t
-          |None -> Env.add x t env
-        )
-      else
-        raise (Error (Printf.sprintf "duplication dans la declaration de %s" x)))
-      
-  ) tenv l
-
-
-let add_class_env l env = 
-  List.fold_left (fun env class_def -> 
-    if(Env.mem class_def.class_name env) then error "Deux classes avec le même nom"
-    else
-      Env.add class_def.class_name ((TClass class_def.class_name)) env
-    ) env l
-(**)
-let get_class (l: class_def list) (class_name:string): class_def = 
-  try 
-    List.find (fun class_d -> class_d.class_name = class_name) l
-  with 
-    |Not_found -> error "Classe non definie"
-
-(* Pour verifier qu'on a pas declaré un tableau de void*)
+(** renvoie si [t] est TArray de void  *)
 let rec est_arr_void t = 
   match t with 
   TVoid -> true
   |TArray t' -> est_arr_void t'
   |_ -> false
 
-(* rend la dimesion du tableau déclaré 
-- new[] int [][][] : rend 3
-*)
+(** [add_env l tenv est_sous_type type_expr] ajoute les variables de [l] à l'environnement [tenv]. 
+    Lève [Error] en cas de duplication de noms et [type_error] si le type d'une valeur initiale 
+    ne correspond pas au type static déclaré. *)
+let rec add_env l tenv est_sous_type type_expr =
+  let l' = ref l in
+  List.fold_left (fun env (x, t, val_init) -> 
+      if(est_arr_void t) then error "void n'est pas un type valide pour element de tableaux"
+      else(
+      l' := List.tl !l';
+      (if(List.for_all (fun (x',_,_) -> x<>x') !l') then 
+        (match val_init with 
+          
+          |Some e -> 
+            let te = type_expr e tenv in 
+            if (est_sous_type te t) then Env.add x te env
+            else 
+              (Printf.printf "oui c'est la \n";
+              type_error te t)
+          |None -> Env.add x t env
+        )
+      else
+        raise (Error (Printf.sprintf "duplication dans la declaration de %s" x))))
+      
+  ) tenv l
+
+(* Ajoute les classes avec leur nom à l'environement, 
+utile pour s'assurer que pas d'auutre variable ont l'id d'une classe 
+idée pour static peut être *)
+let add_class_env l env = 
+  List.fold_left (fun env class_def -> 
+    if(Env.mem class_def.class_name env) then error "Deux classes avec le meme nom,ou variable avec nom de classe"
+    else
+      Env.add class_def.class_name ((TClass class_def.class_name)) env
+    ) env l
+
+let get_class (l: class_def list) (class_name:string): class_def = 
+  try 
+    List.find (fun class_d -> class_d.class_name = class_name) l
+  with 
+    |Not_found -> error "Classe non definie"
+
+
+
+(** [dimension_array t] renvoie la dimension du tableau décrit par [t]. 
+    Par exemple, [dimension_array (TArray (TArray (TArray t)))] renvoie 3. *)
 let dimension_array t = 
 
   let rec aux t acc = 
@@ -65,21 +71,19 @@ let dimension_array t =
   in
 
   aux t 1
-(*
-- POur recuperer le type recursif des tableaux multidimension
-parceque dans la syntaxe on a que le type primtif avec new.
 
-avec int [1][2] on recupere : TArray (TArray int) 
-*)
+(** [get_recTyp_from_ArrayDecl n prim_type] renvoie le type récursif d'un tableau 
+    multidimensionnel de profondeur [n] avec le type primitiif [prim_type]. 
+    Par exemple, [get_recTyp_from_ArrayDecl 2 TInt] renvoie [TArray (TArray TInt)]. *)
 let rec get_recTyp_from_ArrayDecl n prim_type = 
 
   if (n = 1) then 
     TArray prim_type
   else
     TArray (get_recTyp_from_ArrayDecl (n-1) prim_type)
-(*
-- Recupere le type de la nieme dimension dans le tableau
-*)
+
+(** [get_nth_dim_typ t n] renvoie le type de la [n]-ième dimension du tableau [t], 
+    Précodnition : [t] est un [TArray] de dimension au moins [n]. *)
 let rec get_nth_dim_typ t n = 
   if (n=1) then 
     t
@@ -89,13 +93,13 @@ let rec get_nth_dim_typ t n =
     |_ -> error "probleme tableau !!" (* pas censé arrivé *)
 let typecheck_prog p =
   
-    (* Vérifie que la liste des expressions el s'évalue de manière compatible avec le type demandé des parametres*)
+  (** [for_all_params el params_types type_expr tenv] vérifie que chaque expression de [el] 
+    est un sous-type du type attendu dans [params_types]. 
+    Lève [type_error] en cas d'incompatibilité ou une erreur si les longueurs diffèrent. *)
   let rec for_all_params el params_types type_expr tenv  = 
     let t_exepec = ref TVoid in
     let t_act = ref TVoid in
-    (*
-    il faut que les el soit des sous type de params
-    *)
+
     try
       ( if not( List.for_all2 (fun e (_,t) ->
           let t' = type_expr e tenv  in
@@ -117,13 +121,14 @@ let typecheck_prog p =
         (match c1.parent with
         Some parent_name -> est_sous_type (TClass parent_name) t2
         |None -> false)
-
+      | TArray t1,TArray t2 -> est_sous_type t1 t2
       |_-> false
       )
   in
 
-  (*retourne la premiere methode rencontré lors de la 
-    remonté de la hiéarchie des classes*)
+(** [get_method class_def f] retourne la première méthode nommée [f] trouvée 
+    en remontant la hiérarchie des classes depuis [class_def]. 
+    Lève [Error] si la méthode est inexistante. *)
   let rec get_method class_def f = 
       try 
         List.find (fun meth_d -> meth_d.method_name = f) class_def.methods
@@ -133,7 +138,10 @@ let typecheck_prog p =
         Some cn -> get_method (get_class p.classes cn) f
         |None-> raise (Error "Methode inexistante"))
     in
-
+  
+  (** [get_attr class_def s] retourne le premier attribut nommé [s] trouvé 
+    en remontant la hiérarchie des classes depuis [class_def]. 
+    Lève [Error] si l'attribut est inexistant. *)
   let rec get_attr class_def s = 
       try 
          List.find (fun (att, typ,_,_) -> att=s ) class_def.attributes 
@@ -154,6 +162,9 @@ let typecheck_prog p =
     let typ_e = type_expr e tenv  in
     if typ_e <> typ then type_error typ_e typ
   
+(** [ckeck_and_typ_bop e1 e2 typ bop tenv] vérifie que [e1] et [e2] sont de type [typ] 
+    et renvoie le type attendu pour l'opérateur binaire [bop] si c'est le cas. 
+    Lève [type_error] en cas d'incompatibilité. *)
   and ckeck_and_typ_bop e1 e2 typ bop tenv = 
     let t1 = type_expr e1 tenv  in
     if(t1=typ) then 
@@ -230,12 +241,6 @@ let typecheck_prog p =
         |_ -> error "Appel de methode sur non-objet"
       )
     | ArrayNelts (t,le) -> 
-      (**!!!!!!!  
-      !!! traite le cas ou t'intialise par une liste il faut refuser
-      ça quand on a deja fait un new*)
-
-      if(est_arr_void t) then error "void n'est pas un type valide pour element de tableaux"
-      else
         let dim_saisie = ref 0 in
         List.iter (fun e -> check e TInt tenv ; dim_saisie := (!dim_saisie)+1) le;
         get_recTyp_from_ArrayDecl !dim_saisie t
@@ -245,7 +250,7 @@ let typecheck_prog p =
                         |[] -> error "init de tableau avec une liste vide d'elements"
                         |e::tl -> type_expr e tenv 
       ) in
-      List.iter (fun e -> check e first_type tenv ) l;
+      List.iter (fun e -> let _ = est_sous_type (type_expr e tenv) first_type in ()) l;
       TArray first_type
 
   and type_mem_access m tenv = match m with
@@ -275,8 +280,6 @@ let typecheck_prog p =
             get_nth_dim_typ t !dim_saisie
         |_ -> error " e n'est pas un tableau dans e.[n]"
       )
-
-
   in
 
   let rec check_instr i ret tenv  = match i with
@@ -366,7 +369,7 @@ let typecheck_prog p =
     
   
   
-  (* pour les méthodes de type different de void on oblige le return *)
+  (* Inspirée du cours *)
   and return_exist i = 
     match i with 
       | Print _ -> false
@@ -381,7 +384,7 @@ let typecheck_prog p =
         | i :: s -> return_exist i || return_seq s
   in
 
-  let tenv = add_env p.globals Env.empty est_sous_type type_expr in
-  let tenv = add_class_env p.classes tenv in
+  let tenv = add_class_env p.classes Env.empty in
+  let tenv = add_env p.globals tenv est_sous_type type_expr in
   List.iter (fun c_def -> check_class c_def tenv) p.classes;
   check_seq p.main TVoid tenv 

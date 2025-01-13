@@ -1,5 +1,5 @@
-var int x;
-var int y;
+var int x,y;
+var int[] t = [1,2,3];
 
 main {
   x = 1;
@@ -7,4 +7,5 @@ main {
   x = x+2;
   y = y*(x+4);
   print(y);
+  print(t.[1]);
 }

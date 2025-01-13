@@ -39,7 +39,7 @@ let rec create_array t_prim ln =
 
 
 (* retourne par exemple pour un accès t[0][5] la ligne 0 (mais pas l'accès au 5eme) 
-et le dernier indice (5)*)
+et retourne le dernier indice (5)*)
 let rec get_index li array = 
   match li,array with 
   |[],_ -> failwith "N'est jamais censé arriver (traité au typechecker)"
@@ -71,7 +71,7 @@ let exec_prog (p: program): unit =
   - recupere tous les attributs d'un objet avec ceux hérités
   - On remonte jusqu'a la classe la plus haute dans la hiearchie avant de 
   commencer à ajouter, comme ça si y'a les même nom d'attributs entre une classe
-  mere et un fils, l'attribut du fils va être utilisé, parceque ajouté en dernier
+  mere et un fils, l'attribut du fils va être utilisé.
 *)
   let rec set_All_fields fields class_def eval = 
     

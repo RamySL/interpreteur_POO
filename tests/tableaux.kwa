@@ -1,29 +1,33 @@
-var int[][] t;
-var int i;
-var int j;
+var int[][] t = [[1]];
+var int i,j;
+//var void[][] tab; // doit lever une erreur
+var pere[] t_obj = new[] fils[5]; // doit marcher
+var pere[] t_obj_2 = [new fils]; // doit marcher
+var pere[] t_obj3 = [new pere, new fils]; // doit marcher
+
+
+class pere {
+
+}
+
+class fils extends pere {
+
+}
 
 main {
-    t= new[] int [4][5];
-        
-    i = 0;
-    j = 0;
-    while(i<4){
-        while(j<5){
-            t.[i][j] = i*j;
-            j = j + 1;
-        }
-    j=0;
-    i=i+1;
-    }
-    i=0;
-    j=0;
-    while(i<4){
-        while(j<5){
-            print (t.[i][j]);
-            j = j + 1;
-        }
-    j=0;
-    i=i+1;
-    }
 
+    t= new[] int [4][5];
+    t.[0][0] = 0;
+    print(t.[0][0]);
+    //t.[10][0] = 0;// erreur indice
+    //t.[0][0][0]=0; //erreur dimension
+    t.[3][4] = 40;
+    print(t.[3][4]);
+
+    t=[[5],[2],[3]];
+    print(t.[0][0]);
+    print(t.[1][0]);
+    print(t.[2][0]);
+        
+    
 }
