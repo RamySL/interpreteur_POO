@@ -15,14 +15,11 @@ exception Error of string
 exception Return of value
 
 
-
-(* implementation des tableau :
-  la précondition de la fonction dont on sait qu'elle est vérifié à travers 
-  le typecheker c'est on aura pas TVOid à traiter et la liste vide aussi
-  ne va pas apparaitre, et aussi que si il ya un seul element dans la liste
-  alors le type fait partie de ceux des type dit primitif (ça c'est l'analyse syntaxique qui l'assure)
-  et si il ya plusieurs elements dans la liste alors on fait forcément sur un TArray
-*)
+(** [create_array t_prim ln] crée un tableau avec élément de la dimension n de type [t_prim] 
+    avec les dimensions spécifiées dans [ln]. 
+    Préconditions (vérifiées avec le typechecker) : [ln] n'est jamais vide, [t_prim] est un type valide, 
+    et s'il n'y a qu'un seul élément dans [ln], alors [t_prim] est un type primitif. 
+    Lève une erreur si ces préconditions ne sont pas respectées. *)
 let rec create_array t_prim ln = 
   
   match ln with 
@@ -38,13 +35,20 @@ let rec create_array t_prim ln =
     VArray (Array.init (n) (fun _-> create_array t_prim tl))
 
 
-(* retourne par exemple pour un accès t[0][5] la ligne 0 (mais pas l'accès au 5eme) 
-et retourne le dernier indice (5)*)
+(** [get_index li array] accede aux indices des différente dimensions un par
+    un sauf le dernier indice dans la liste, et retour ce dernier indice avec le dernier accès
+    Précondition : [li] n'est pas vide et [array] à aumoins List.length[li] dimensions
+    Lève une erreur si cette précondition n'est pas respectée. *)
 let rec get_index li array = 
   match li,array with 
   |[],_ -> failwith "N'est jamais censé arriver (traité au typechecker)"
-  |[i],VArray array -> array,i
-  |i::tl, VArray array -> get_index tl array.(i)
+  |[i],VArray array -> 
+    if(Array.length array <= i) then (raise (Error "index out of bounds"))
+    else array,i
+  |i::tl, VArray array -> 
+    if(Array.length array <= i) then (raise (Error "index out of bounds"))
+    else
+    get_index tl array.(i)
   |_-> failwith "N'est jamais censé arriver (traité au typechecker)"
 
 let exec_prog (p: program): unit =
@@ -67,12 +71,11 @@ let exec_prog (p: program): unit =
     List.find (fun class_d -> class_d.class_name = cn) p.classes 
   in
 
-  (* 
-  - recupere tous les attributs d'un objet avec ceux hérités
-  - On remonte jusqu'a la classe la plus haute dans la hiearchie avant de 
-  commencer à ajouter, comme ça si y'a les même nom d'attributs entre une classe
-  mere et un fils, l'attribut du fils va être utilisé.
-*)
+(** [set_All_fields fields class_def eval] initialise tous les attributs d'un objet, 
+    y compris ceux hérités, en remontant jusqu'à la classe la plus haute avant d'ajouter les attributs. 
+    En cas de nom d'attributs identiques, ceux des classes les plus basses dans l'hiearchie vont 
+    être prit parceque ajoutés en dernier. 
+    *)
   let rec set_All_fields fields class_def eval = 
     
     let aux fields class_def = 
@@ -82,6 +85,8 @@ let exec_prog (p: program): unit =
           None -> Hashtbl.add fields att Null;
           |Some e -> 
             try 
+              (* ceux qui levent erreur ici vont être init
+              avec les Set() ajoutés au main*)
               let ve = eval e in
               Hashtbl.add fields att ve;
             with
@@ -98,8 +103,9 @@ let exec_prog (p: program): unit =
   in
 
   
-    (*retourne la premiere methode rencontré lors de la 
-    remonté de la hiéarchie des classes*)
+(** [get_method class_def f] retourne la première méthode nommée [f] rencontrée 
+    en remontant la hiérarchie des classes depuis [class_def]. 
+    Lève une erreur si aucune méthode n'est trouvée. *)
   let rec get_method class_def f = 
     try 
       List.find (fun meth_d -> meth_d.method_name = f) class_def.methods
@@ -107,9 +113,11 @@ let exec_prog (p: program): unit =
     |Not_found -> 
       (match class_def.parent with 
       Some cn -> get_method (get_class cn) f
-      |_-> raise (Error "definition de methode introuvable (pas normal)"))
+      |_-> failwith "definition de methode introuvable (pas normal)")
   in
-
+  (** [eval_call f this args eval] évalue un appel à la méthode [f] de l'objet [this] 
+    avec les arguments [args]. 
+    *)
   let rec eval_call f this args eval =
     let c = (get_class this.cls) in
     let meth = get_method c f in
@@ -128,7 +136,6 @@ let exec_prog (p: program): unit =
     List.iter2 (fun (par, _) v  -> Hashtbl.add lenv par v) meth.params args;
     (*ajout des vars locals dans l'espace local*)
     aux lenv;
-
     exec_seq meth.code lenv;
 
   and exec_seq s lenv =
@@ -181,9 +188,7 @@ let exec_prog (p: program): unit =
               |Not_found -> Hashtbl.find env id
             )
           |Field(eo,att) -> 
-            
             let obj = evalo eo in
-            
             (*!!!!!!!!!!*)
             Hashtbl.find obj.fields att
           |Arr(e1,le) -> 
@@ -193,25 +198,19 @@ let exec_prog (p: program): unit =
         )
       | This -> Hashtbl.find lenv "this"
       | New cn -> 
-        (*1111111*)
-        (*** UNe possibilité d'appeler le constructeur des classes sup ?*)
         let c = get_class cn in
         let fields = Hashtbl.create 16 in
         set_All_fields fields c eval;
+
         VObj ({cls=c.class_name; fields=fields})
-        
       | NewCstr (cn, el) -> 
-        (*111111111*)
-        
         let c = get_class cn in
         let fields = Hashtbl.create 16 in
         set_All_fields fields c eval;
         
         eval_call "constructor" {cls=c.class_name; fields=fields} (List.map (fun e -> eval e) el) eval;
         VObj ({cls=c.class_name; fields=fields})
-        
       | MethCall (e, s, el) -> 
-        (*11111111*)
         (try 
           eval_call s (evalo e) (List.map (fun e -> eval e) el) eval;
           Null
@@ -223,8 +222,6 @@ let exec_prog (p: program): unit =
         create_array t ln
       | ArrayList l -> 
         VArray(Array.of_list (List.map (eval) l))
-      
-    
     in
       
     let rec exec (i: instr): unit = match i with
@@ -249,7 +246,6 @@ let exec_prog (p: program): unit =
             let li = List.map (evali) le in
             let arr,i = get_index li (eval e1) in
             arr.(i) <- ve
-
         )
       | If(e, s1, s2) -> 
         if(evalb e) then 

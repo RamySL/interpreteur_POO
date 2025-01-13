@@ -61,9 +61,12 @@ de taille etc
     que si mem est un accès à un attribut final alors init est à None sinon on leve une erreur. (vu qu'on a vérifier avant qu'il ya un constructeur pour initialiser et que le constructeur est la premiere méthode dans une classe alors pas de risque que l'initialisation se fasse dans une autre méthode)
 
 3) interpreteur : 
+Leve les erreurs attendus à l'execution, division par 0, acces indice invalide du tableau.
+   
+- Extensions :
+  - initialisation à la déclaration : pour l'implementer je rajoute de façon implicite des instruction Set() au tout début de la fonction main comme ça l'execution se fera avec l'environement des variable globales 
 
 
 
 Problème : 
 - Vérifie l'egalité phy normalement deux objet instancier diff doivent rendre faux 
-- debordement indice tableaux
