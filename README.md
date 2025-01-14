@@ -8,6 +8,7 @@ Ce qui a été réalisé :
 - déclaration en série.
 - initialisation à la déclaration.
 - Égalité structurelle
+- Accesibilité : Protected, Private
 
 1) Analayse Syntaxique (Parser & Lexer) : 
 

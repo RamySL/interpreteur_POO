@@ -126,6 +126,15 @@ let exec_prog (p: program): unit =
       aux fields class_def
   in
 
+  let rec est_sous_type class_def1 class_def2 = 
+    if (class_def1.class_name=class_def2.class_name) then true
+    else
+      (match class_def1.parent with
+        None -> false
+        |Some cn -> est_sous_type (get_class cn) class_def2
+      )
+  in
+
   
 (** [get_method class_def f] retourne la première méthode nommée [f] rencontrée 
     en remontant la hiérarchie des classes depuis [class_def]. 
@@ -248,6 +257,15 @@ let exec_prog (p: program): unit =
         create_array t ln
       | ArrayList l -> 
         VArray(Array.of_list (List.map (eval) l))
+
+      |Instanceof(e, t) ->
+        let obj = evalo e in
+        let class_def = 
+          (match t with 
+          TClass cn -> (get_class cn)
+          |_-> failwith "Pas censé arrivé") in
+
+        VBool(est_sous_type (get_class obj.cls) class_def)
     in
       
     let rec exec (i: instr): unit = match i with

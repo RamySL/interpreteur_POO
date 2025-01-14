@@ -278,6 +278,18 @@ let typecheck_prog p =
       List.iter (fun e -> let _ = est_sous_type (type_expr e tenv) first_type in ()) l;
       TArray first_type
 
+    |Instanceof (e, t) -> 
+      match (type_expr e tenv) with 
+      |TClass _ -> 
+        (match t with 
+          TClass cn -> 
+            if(Env.mem cn tenv) then TBool
+            else
+              error "instanceof : classe innexistante dans"
+          |_ -> failwith "ne doit pas arrivé (assurré par le parser)"
+          )
+      |_ -> error "dans : e instanceof t. e doit etre un objet"
+
   and type_mem_access m tenv = match m with
     | Var s -> 
       (try

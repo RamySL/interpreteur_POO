@@ -29,6 +29,7 @@
         "static", STATIC;
         "private", PRIVATE;
         "protected", PROTECTED;
+        "instanceof", INSTANCEOF;
       ] ;
     fun s ->
       try Hashtbl.find h s

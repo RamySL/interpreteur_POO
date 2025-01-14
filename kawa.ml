@@ -48,10 +48,9 @@ type expr =
   (* Appel de méthode *)
   | MethCall of expr * string * expr list
   (*structures*)
-  (* si l'utilisateur ne saisie pas de nombre d'elt pour le tableau 
-  alors un tableau à taille dynamique sera créer *)
   | ArrayNelts of typ * expr list 
-  | ArrayList of expr list    
+  | ArrayList of expr list 
+  | Instanceof of expr * typ   
 
 (* un type qui contient si le tableau à été init, et une liste des dimension*)
 (* Accès mémoire : variable ou attribut d'un objet *)

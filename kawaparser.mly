@@ -19,9 +19,10 @@
 %token NEG EQUAL NEQ LT LE GT GE AND OR TRUE FALSE
 %token ASSIGN PRINT VAR ATTRIBUTE METHOD CLASS EXTENDS NEW THIS IF ELSE
 %token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK
-%token FINAL STATIC NEQSTRUCT EQSTRUCT PRIVATE PROTECTED
+%token FINAL STATIC NEQSTRUCT EQSTRUCT PRIVATE PROTECTED INSTANCEOF
 %token EOF
 
+%nonassoc INSTANCEOF
 %left OR
 %left AND
 %left EQUAL NEQ NEQSTRUCT EQSTRUCT
@@ -183,6 +184,7 @@ expression:
 // je m'inspire de java, je veut pas imposer un autre mot clé comme Array(3) 
 | NEW LBRACK RBRACK t=types_prim le=list(seq_index){ ArrayNelts (t, le) } 
 | LBRACK l=seq_expr RBRACK                        { ArrayList l }
+| e=expression INSTANCEOF id=IDENT                { Instanceof (e, TClass id) }
 ;
 
 seq_index:
