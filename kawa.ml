@@ -82,12 +82,16 @@ and seq = instr list
    Syntaxe : method <type de retour> <nom> (<params>) { ... }
 
    Le corps de la méthode est similaire au corps d'une fonction. *)
+  
+type accessibility = Private | Protected
+
 type method_def = {
     method_name: string;
     code: seq;
     params: (string * typ) list;
     locals: (string * typ * expr option) list;
     return: typ;
+    acces: accessibility
   }
         
 (* Définition de classe 
@@ -100,8 +104,8 @@ type method_def = {
    paramètre implicite this. *)
 type class_def = {
     class_name: string;
-                (* id    type   final?  val init*)
-    attributes: (string * typ * bool * expr option ref)list; 
+                (* id    type   final?  val init         private?protected?*)
+    attributes: (string * typ * bool * expr option ref * accessibility)list; 
     methods: method_def list;
     parent: string option;
   }

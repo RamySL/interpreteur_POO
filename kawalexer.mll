@@ -27,6 +27,8 @@
         "void",TVOID;
         "final",FINAL;
         "static", STATIC;
+        "private", PRIVATE;
+        "protected", PROTECTED;
       ] ;
     fun s ->
       try Hashtbl.find h s

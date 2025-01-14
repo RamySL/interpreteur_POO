@@ -18,7 +18,8 @@
 %token MINUS PLUS MUL DIV MOD
 %token NEG EQUAL NEQ LT LE GT GE AND OR TRUE FALSE
 %token ASSIGN PRINT VAR ATTRIBUTE METHOD CLASS EXTENDS NEW THIS IF ELSE
-%token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK FINAL STATIC NEQSTRUCT EQSTRUCT
+%token WHILE RETURN TINT TBOOL TVOID LBRACK RBRACK
+%token FINAL STATIC NEQSTRUCT EQSTRUCT PRIVATE PROTECTED
 %token EOF
 
 %left OR
@@ -64,21 +65,21 @@ parent:
 ;
 
 att_decl:
-|  ATTRIBUTE t=types id=IDENT l_decl=att_decl_multiple SEMI 
+|  ATTRIBUTE acces=accessibility t=types id=IDENT l_decl=att_decl_multiple SEMI 
   {
-    List.map (fun (id,init) -> (id, t, false, init))  ((id, ref None)::l_decl)
+    List.map (fun (id,init) -> (id, t, false, init, acces))  ((id, ref None)::l_decl)
   }
-|  ATTRIBUTE t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
+|  ATTRIBUTE acces=accessibility t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
   {
-    List.map (fun (id,init) -> (id, t, false, init))  ((id, ref (Some e))::l_decl)
+    List.map (fun (id,init) -> (id, t, false, init, acces))  ((id, ref (Some e))::l_decl)
   }
-|  ATTRIBUTE FINAL t=types id=IDENT l_decl=att_decl_multiple SEMI 
+|  ATTRIBUTE acces=accessibility FINAL t=types id=IDENT l_decl=att_decl_multiple SEMI 
   {
-    List.map (fun (id,init) -> (id, t, true,init))  ((id,ref None)::l_decl)
+    List.map (fun (id,init) -> (id, t, true, init, acces))  ((id,ref None)::l_decl)
   }
-|  ATTRIBUTE FINAL t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
+|  ATTRIBUTE acces=accessibility FINAL t=types id=IDENT ASSIGN e=expression l_decl=att_decl_multiple SEMI 
   {
-    List.map (fun (id,init) -> (id, t, true,init))  ((id,ref (Some e))::l_decl)
+    List.map (fun (id,init) -> (id, t, true,init,acces))  ((id,ref (Some e))::l_decl)
   }
 ;
 
@@ -89,7 +90,7 @@ att_decl_multiple:
 ;
 
 method_def:
-| METHOD t=types id=IDENT LPAR params=params RPAR BEGIN
+| METHOD acces=accessibility t=types id=IDENT LPAR params=params RPAR BEGIN
   locals=list(var_decl)
   code=list(instruction)
  END 
@@ -101,9 +102,15 @@ method_def:
     params = params;
     locals = locals;
     return = t;
+    acces=acces;
   }
  }
 ;
+
+accessibility:
+|               {Protected}
+|PRIVATE        {Private}
+|PROTECTED      {Protected}
 
 
 var_decl:

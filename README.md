@@ -3,10 +3,11 @@ Ce qui a été réalisé :
 - Toutes les tâches de base ont été réalisé et testé, arithmétique, variables, classes et attributs, méthodes et héritages.
 
 - Les extensions suivantes on été rajoutées (Avec plus de détails sur l'implémentaion dans les sections suivantes) :
-- Les tableaux : On a tous ce qu'apporte un langage de programmation bas niveau avec des tableaux primitifs, c'est à dire une taille fixe, pas de fonction length,!!!! REGLE new 
+- Les tableaux : On a tous ce qu'apporte un langage de programmation bas niveau avec des tableaux primitifs, c'est à dire une taille fixe, pas de fonction length
 - attributs immuables : ajout du mot clé final
 - déclaration en série.
 - initialisation à la déclaration.
+- Égalité structurelle
 
 1) Analayse Syntaxique (Parser & Lexer) : 
 
@@ -66,6 +67,7 @@ Leve les erreurs attendus à l'execution, division par 0, acces indice invalide 
    
 - Extensions :
   - initialisation à la déclaration : pour l'implementer je rajoute de façon implicite des instruction Set() au tout début de la fonction main comme ça l'execution se fera avec l'environement des variable globales 
+  - égualité structurelle : implémenté par la fonction récursive eq_structurelle, pour un objet ou un tableau vérifie que tous les attributs (ou cases de tableau) ont les mêmes valeurs 
 
 
 Problème : 
