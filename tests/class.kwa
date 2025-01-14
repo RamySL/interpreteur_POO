@@ -1,8 +1,8 @@
 var point a,b,c;
-//var int point; //erreur
+//var int point; //erreur duplication
+
 class point {
-  attribute int x;
-  attribute int y;
+  attribute int x,y;
 }
 
 main {

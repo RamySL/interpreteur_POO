@@ -125,29 +125,50 @@ let typecheck_prog p =
       )
   in
 
-(** [get_method class_def f] retourne la première méthode nommée [f] trouvée 
-    en remontant la hiérarchie des classes depuis [class_def]. 
+(** [get_method class_def f] retourne la première méthode nommée [f] trouvée en remontant 
+    la hiérarchie des classes depuis [class_def], en vérifyant que la méthode est accessible. 
     Lève [Error] si la méthode est inexistante. *)
-  let rec get_method class_def f = 
+  let get_method class_def f = 
+      (* recherche la méthode dans les classes parentes en vérifyant l'accessibilité*)
+      let rec get_method_parents class_def =
+        try 
+          List.find (fun meth_d -> (meth_d.method_name = f) && (meth_d.acces = Protected)) class_def.methods
+        with 
+        |Not_found -> 
+          (match class_def.parent with 
+          Some cn -> get_method_parents (get_class p.classes cn) 
+          |None-> raise (Error "Methode inexistante ou innaccessible"))
+      in
+      (* dans la classe de la méthode on vérifie pas l'accesibilité*)
       try 
         List.find (fun meth_d -> meth_d.method_name = f) class_def.methods
       with 
       |Not_found -> 
         (match class_def.parent with 
-        Some cn -> get_method (get_class p.classes cn) f
+        Some cn -> get_method_parents (get_class p.classes cn) 
         |None-> raise (Error "Methode inexistante"))
     in
   
   (** [get_attr class_def s] retourne le premier attribut nommé [s] trouvé 
-    en remontant la hiérarchie des classes depuis [class_def]. 
+    en remontant la hiérarchie des classes depuis [class_def] en vérifyant que l'attribut est accessible.  
     Lève [Error] si l'attribut est inexistant. *)
-  let rec get_attr class_def s = 
+  let get_attr class_def s = 
+      let rec get_attr_parents class_def =
+        try 
+          List.find (fun (att, typ,_,_,acces) -> att=s && acces=Protected) class_def.attributes 
+        with 
+        |Not_found -> 
+          (match class_def.parent with 
+          Some cn -> get_attr_parents (get_class p.classes cn) 
+          |None-> raise (Error "Attribut inexistant ou innaccessible "))
+      in
+
       try 
-         List.find (fun (att, typ,_,_) -> att=s ) class_def.attributes 
+         List.find (fun (att, typ,_,_,_) -> att=s ) class_def.attributes 
       with 
       |Not_found -> 
         (match class_def.parent with 
-        Some cn -> get_attr (get_class p.classes cn) s 
+        Some cn -> get_attr_parents (get_class p.classes cn) 
         |None-> raise (Error "Attribut inexistant"))
     in
 
@@ -268,7 +289,7 @@ let typecheck_prog p =
       (match (type_expr e tenv ) with
         TClass class_name -> 
           let c = get_class p.classes class_name in
-          let (_,t,_,_) =  get_attr c s in
+          let (_,t,_,_,_) =  get_attr c s in
           t
         |_ -> error "Acces attribut pour type qui n'est pas un objet"
       )
@@ -303,7 +324,7 @@ let typecheck_prog p =
                   (match (type_expr e' tenv) with
                     TClass class_name -> 
                       let c = get_class p.classes class_name in
-                      let (_,t,final,init) =  get_attr c att in
+                      let (_,t,final,init,_) =  get_attr c att in
 
                       if(final && (!init) = None) then(
                         init := Some e;
@@ -336,7 +357,7 @@ let typecheck_prog p =
     (* On vérifie que les attributs final non initilisés à la déclaration 
     sont bien initialisés dans le constructeur *)
 
-    let finals_non_init_list = List.filter (fun (_,_,final,init)-> final && (!init = None) )  c.attributes in
+    let finals_non_init_list = List.filter (fun (_,_,final,init,_)-> final && (!init = None) )  c.attributes in
     let len_finals = List.length finals_non_init_list in
 
     (if (len_finals > 0) then
@@ -363,7 +384,7 @@ let typecheck_prog p =
     if(m.return <> TVoid && not(return_seq m.code)) then error "Manque un Return"
   (*!!!!!!!!! Ecrit la spec*)
   and check_constr_init_finals l_finals code = 
-    if not(List.for_all ( fun (id,_,_,_) ->
+    if not(List.for_all ( fun (id,_,_,_,_) ->
           List.exists ( fun instr ->
             match instr with 
               Set(Field(obj,att),e) -> obj=This && att=id

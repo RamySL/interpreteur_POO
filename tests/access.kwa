@@ -1,0 +1,43 @@
+/* fichier pour tester l'accessibilité Private, Protected */
+
+var grand_pere gp;
+var pere p;
+var fils f;
+
+class grand_pere {
+    attribute private int prive_a = 5, prive_b=7;
+    attribute protected int protected_a = 10;
+    attribute int default_a = 15;
+
+    method private int prive_a (){
+        return this.prive_a;
+    }
+}
+
+class pere extends grand_pere {
+    attribute protected int prive_b=8; // doit etre accessible a partir de fils 
+                                        // parceque il cache le private de gp
+    
+    method protected int prive_a (){
+        return this.prive_b;
+    }
+}
+
+class fils extends pere {
+    
+}
+
+main{
+    gp = new grand_pere;
+    p = new pere;
+    f = new fils;
+
+    //print(f.prive_a); //erreur
+    print(f.prive_b); // affiche 8
+    print(f.protected_a); // affiche 10
+    print(f.default_a); // affiche 15
+
+    //print(p.prive_a()); // erreur
+    print(f.prive_a()); // affiche 8
+   
+}

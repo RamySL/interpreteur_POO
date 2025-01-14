@@ -104,7 +104,7 @@ let exec_prog (p: program): unit =
     
     let aux fields class_def = 
       
-      List.iter (fun (att,_,_,init) ->
+      List.iter (fun (att,_,_,init,_) ->
         (match !init with 
           None -> Hashtbl.add fields att Null;
           |Some e -> 

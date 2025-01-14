@@ -24,7 +24,7 @@
 
 %left OR
 %left AND
-%left EQUAL NEQ
+%left EQUAL NEQ NEQSTRUCT EQSTRUCT
 %nonassoc LT LE GT GE
 %left PLUS MINUS
 %left MUL DIV MOD
