@@ -1,0 +1,92 @@
+// test de l'égualité physique et structurelle 
+
+var grand_pere gp1,gp2,gp3,gp4;
+var pere p1,p2;
+var fils f1,f2;
+
+class grand_pere{
+    attribute int a = 5;
+    attribute int [] ta = [1,2,3];
+}
+
+class pere extends grand_pere{
+    attribute int b = 7;
+    attribute int [] tb = [1,2,3];
+}
+
+class fils extends pere{
+    attribute int c = 10,d=15,e=20;
+    attribute int [] tc = [4,5,6];
+}
+
+main {
+    gp1 = new grand_pere;
+    gp2 = new grand_pere;
+    p1 = new pere;
+    p2 = new fils;
+    gp3 = p2;
+
+    // doit afficher 1
+    if(gp1===gp2){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // doit afficher 0
+    if(gp1=/=gp2){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // doit afficher 0
+    if(gp1==gp2){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // doit afficher 1
+    if(gp1!=gp2){
+        print(1);
+    }else{
+        print(0);
+    }
+    // comparaison tableaux phy differents mais structurellement égaux
+    // doit afficher 1
+    if(gp1.ta === p1.tb){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // doit afficher 0
+    if(gp1.ta == p1.tb){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    gp1.a = 55;
+    // doit afficher 0 (ils ont un attribut différent)
+    if(gp1===gp2){
+        print(1);
+    }else{
+        print(0);
+    }
+    // doit lever une erreur car deux types différent même si sous type
+    /*if(gp3===p2){
+        print(1);
+    }else{
+        print(0);
+    }*/
+    // doit afficher 1 
+    if(gp3 == p2){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // affiche au totale :  1 0 0 1 1 0 0 1
+}

@@ -195,10 +195,15 @@ let typecheck_prog p =
       |Eq|Neq ->
         let t1 = type_expr e1 tenv  in
         let t2 = type_expr e2 tenv  in
-
-        if (t1=t2) then TBool 
-        else (type_error t2 t1)
         
+        if (est_sous_type t1 t2 || est_sous_type t2 t1) then TBool 
+        else (type_error t2 t1)
+      |EqS|NeqS ->
+          let t1 = type_expr e1 tenv  in
+          let t2 = type_expr e2 tenv  in
+          
+          if (t1=t2) then TBool 
+          else (type_error t2 t1)
       )
     | Get mem_acc -> type_mem_access mem_acc tenv 
     | This ->

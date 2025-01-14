@@ -69,4 +69,4 @@ Leve les erreurs attendus à l'execution, division par 0, acces indice invalide 
 
 
 Problème : 
-- Vérifie l'egalité phy normalement deux objet instancier diff doivent rendre faux 
+- Vérifie l'egalité phy (dans le type chekcer binop doit accepeter un sous type)

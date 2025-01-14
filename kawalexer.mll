@@ -73,6 +73,8 @@ rule token = parse
   | ">="  { GE }
   | "&&"  { AND }
   | "||"  { OR }
+  | "===" { EQSTRUCT }
+  | "=/=" { NEQSTRUCT }
   | ","   { COMMA }
 
   | eof  { EOF }

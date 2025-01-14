@@ -53,6 +53,7 @@ let rec get_index li array =
 
   let print_address x =
     Printf.printf "Adresse mémoire : %x\n" (Obj.magic (Obj.repr x))
+  
   let eq_physique v1 v2 = 
     match v1,v2 with 
     VInt n1, VInt n2 -> n1==n2
@@ -60,6 +61,18 @@ let rec get_index li array =
     |VObj o1, VObj o2 -> o1==o2
     |VArray arr1, VArray arr2 -> arr1==arr2
     |_ -> false
+
+  let rec eq_structurelle v1 v2 = 
+
+    match v1,v2 with 
+      VInt n1, VInt n2 -> n1=n2
+      |VBool b1, VBool b2 -> b1=b2
+      |VObj o1, VObj o2 -> 
+        Hashtbl.fold (fun att v1 equal -> 
+          let v2 = Hashtbl.find o2.fields att in
+          (eq_structurelle v1 v2) && equal) o1.fields true 
+      |VArray arr1, VArray arr2 -> Array.for_all2 (eq_structurelle) arr1 arr2
+      |_ -> false
 
 
 let exec_prog (p: program): unit =
@@ -189,6 +202,8 @@ let exec_prog (p: program): unit =
         |Or -> VBool (evalb e1 || evalb e2)
         |Eq -> VBool (eq_physique (eval e1) (eval e2))
         |Neq-> VBool (not (eq_physique (eval e1) (eval e2)))
+        |EqS -> VBool (eq_structurelle (eval e1) (eval e2))
+        |NeqS-> VBool (not (eq_structurelle (eval e1) (eval e2)))
         )
       | Get (mem_acc) -> 
         (match mem_acc with 
