@@ -1,4 +1,4 @@
-var int[][] t = [[1]];
+var int[][] t = [[1]],t2 = [[1]];
 var int i,j;
 //var void[][] tab; // doit lever une erreur
 var pere[] t_obj = new[] fils[5]; // doit marcher
@@ -18,16 +18,30 @@ main {
 
     t= new[] int [4][5];
     t.[0][0] = 0;
-    print(t.[0][0]);
+    print(t.[0][0]); // 0
     //t.[10][0] = 0;// erreur indice
     //t.[0][0][0]=0; //erreur dimension
     t.[3][4] = 40;
-    print(t.[3][4]);
+    print(t.[3][4]); // 40
+
+    // doit afficher 1
+    if(t==t){
+        print(1);
+    }else{
+        print(0);
+    }
+
+    // doit afficher 0
+    if(t==t2){
+        print(1);
+    }else{
+        print(0);
+    }
 
     t=[[5],[2],[3]];
-    print(t.[0][0]);
-    print(t.[1][0]);
-    print(t.[2][0]);
+    print(t.[0][0]);//5
+    print(t.[1][0]);//2
+    print(t.[2][0]);//3
         
     
 }

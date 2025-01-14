@@ -13,5 +13,11 @@ main {
   b.x = 3;
   b.y = 4;
   //print(this.x + a.y + b.x + b.y); // erreur
-  print(a.x + a.y + b.x + b.y); // erreur
+  // doit afficher 0 (egalité physique)
+  if(a==b) {
+    print(1);
+  }else{
+    print(0);
+  }
+  print(a.x + a.y + b.x + b.y);  // afiche 10
 }

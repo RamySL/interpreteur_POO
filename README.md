@@ -54,6 +54,7 @@ de taille etc
                     E |- e1.[e2]: t
 
 - On a aussi une erreur levée pour un tableau de void
+- | VArray of value array 
 
 - final : dans checkclass, on vérifie bien que tout attributs final non init à la déclaration l'est dans le constructeur, on leve une erreur sinon.
 
@@ -65,7 +66,6 @@ Leve les erreurs attendus à l'execution, division par 0, acces indice invalide 
    
 - Extensions :
   - initialisation à la déclaration : pour l'implementer je rajoute de façon implicite des instruction Set() au tout début de la fonction main comme ça l'execution se fera avec l'environement des variable globales 
-
 
 
 Problème : 

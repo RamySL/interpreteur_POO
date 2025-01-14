@@ -51,6 +51,17 @@ let rec get_index li array =
     get_index tl array.(i)
   |_-> failwith "N'est jamais censé arriver (traité au typechecker)"
 
+  let print_address x =
+    Printf.printf "Adresse mémoire : %x\n" (Obj.magic (Obj.repr x))
+  let eq_physique v1 v2 = 
+    match v1,v2 with 
+    VInt n1, VInt n2 -> n1==n2
+    |VBool b1, VBool b2 -> b1==b2
+    |VObj o1, VObj o2 -> o1==o2
+    |VArray arr1, VArray arr2 -> arr1==arr2
+    |_ -> false
+
+
 let exec_prog (p: program): unit =
   let env = Hashtbl.create 16 in
   let var_init = ref [] in
@@ -176,8 +187,8 @@ let exec_prog (p: program): unit =
         |Ge -> VBool (evali e1 >= evali e2)
         |And-> VBool (evalb e1 && evalb e2)
         |Or -> VBool (evalb e1 || evalb e2)
-        |Eq -> VBool(eval e1 = eval e2)
-        |Neq -> VBool(eval e1 <> eval e2)
+        |Eq -> VBool (eq_physique (eval e1) (eval e2))
+        |Neq-> VBool (not (eq_physique (eval e1) (eval e2)))
         )
       | Get (mem_acc) -> 
         (match mem_acc with 

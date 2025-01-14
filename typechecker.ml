@@ -33,8 +33,7 @@ let rec add_env l tenv est_sous_type type_expr =
             let te = type_expr e tenv in 
             if (est_sous_type te t) then Env.add x te env
             else 
-              (Printf.printf "oui c'est la \n";
-              type_error te t)
+              type_error te t
           |None -> Env.add x t env
         )
       else
@@ -357,7 +356,7 @@ let typecheck_prog p =
     check_seq m.code m.return tenv ;
 
     if(m.return <> TVoid && not(return_seq m.code)) then error "Manque un Return"
-  
+  (*!!!!!!!!! Ecrit la spec*)
   and check_constr_init_finals l_finals code = 
     if not(List.for_all ( fun (id,_,_,_) ->
           List.exists ( fun instr ->
