@@ -26,9 +26,9 @@ let rec create_array t_prim ln =
   [] -> failwith "N'est jamais censé arriver (traité au typechecker)"
   |[n] -> 
     (match t_prim with 
-    TInt -> VArray (Array.make (n) (VInt 0))
-    |TBool -> VArray (Array.make (n) (VBool false))
-    |TClass cn -> VArray (Array.make (n) (VObj {cls=cn;fields=Hashtbl.create 0}))
+    TInt -> VArray (Array.make (n) (Null))
+    |TBool -> VArray (Array.make (n) (Null))
+    |TClass cn -> VArray (Array.make (n) (Null))
     |_ -> failwith "N'est jamais censé arriver (traité au typechecker)"
     )
   |n:: tl ->
@@ -50,9 +50,6 @@ let rec get_index li array =
     else
     get_index tl array.(i)
   |_-> failwith "N'est jamais censé arriver (traité au typechecker)"
-
-  let print_address x =
-    Printf.printf "Adresse mémoire : %x\n" (Obj.magic (Obj.repr x))
   
   let eq_physique v1 v2 = 
     match v1,v2 with 

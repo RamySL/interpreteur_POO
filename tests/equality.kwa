@@ -1,4 +1,4 @@
-// test de l'égualité physique et structurelle et de instanceof
+// fichier pour test l'égualité physique et structurelle et de instanceof
 
 var grand_pere gp1,gp2,gp3,gp4;
 var pere p1,p2;
