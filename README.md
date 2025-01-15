@@ -72,4 +72,4 @@ Leve les erreurs attendus à l'execution, division par 0, acces indice invalide 
 
 
 Problème : 
-- Vérifie l'egalité phy (dans le type chekcer binop doit accepeter un sous type)
+- met List.exist à la place de List.forrall !!!

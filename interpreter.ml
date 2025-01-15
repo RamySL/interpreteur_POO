@@ -258,14 +258,18 @@ let exec_prog (p: program): unit =
       | ArrayList l -> 
         VArray(Array.of_list (List.map (eval) l))
 
-      |Instanceof(e, t) ->
-        let obj = evalo e in
-        let class_def = 
-          (match t with 
-          TClass cn -> (get_class cn)
-          |_-> failwith "Pas censé arrivé") in
+      |Instanceof(e, t, estSousType) ->
+        let ve = eval e in
+        match ve with 
+          Null -> VBool(!estSousType)
+          |VObj obj ->
+            let class_def = 
+              (match t with 
+              TClass cn -> (get_class cn)
+              |_-> failwith "Pas censé arrivé") in
 
-        VBool(est_sous_type (get_class obj.cls) class_def)
+            VBool(est_sous_type (get_class obj.cls) class_def)
+          |_ -> failwith "Pas censé arrivé"
     in
       
     let rec exec (i: instr): unit = match i with

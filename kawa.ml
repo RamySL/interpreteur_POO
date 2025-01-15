@@ -50,7 +50,7 @@ type expr =
   (*structures*)
   | ArrayNelts of typ * expr list 
   | ArrayList of expr list 
-  | Instanceof of expr * typ   
+  | Instanceof of expr * typ * bool ref  
 
 (* un type qui contient si le tableau à été init, et une liste des dimension*)
 (* Accès mémoire : variable ou attribut d'un objet *)

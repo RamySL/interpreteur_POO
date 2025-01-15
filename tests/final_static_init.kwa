@@ -1,7 +1,7 @@
 /* tests de final, initialisation à la déclaration, et static */
 
 var point p1,p2;
-var int x=5*true;
+var int x=5;
 
 class point {
   attribute int x = 10;

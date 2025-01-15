@@ -20,15 +20,17 @@ let rec est_arr_void t =
 (** [add_env l tenv est_sous_type type_expr] ajoute les variables de [l] à l'environnement [tenv]. 
     Lève [Error] en cas de duplication de noms et [type_error] si le type d'une valeur initiale 
     ne correspond pas au type static déclaré. *)
-let rec add_env l tenv est_sous_type type_expr =
+let rec add_env l tenv est_sous_type type_expr class_defs =
   let l' = ref l in
+  
   List.fold_left (fun env (x, t, val_init) -> 
       if(est_arr_void t) then error "void n'est pas un type valide pour element de tableaux"
       else(
       l' := List.tl !l';
-      (if(List.for_all (fun (x',_,_) -> x<>x') !l') then 
+      (if(  (List.for_all (fun (x',_,_)  -> x<>x') !l') && 
+            (List.for_all (fun cd -> x<>cd.class_name) class_defs)) then 
+
         (match val_init with 
-          
           |Some e -> 
             let te = type_expr e tenv in 
             if (est_sous_type te t) then Env.add x te env
@@ -41,17 +43,7 @@ let rec add_env l tenv est_sous_type type_expr =
       
   ) tenv l
 
-(* Ajoute les classes avec leur nom à l'environement, 
-utile pour s'assurer que pas d'auutre variable ont l'id d'une classe 
-idée pour static peut être *)
-let add_class_env l env = 
-  List.fold_left (fun env class_def -> 
-    if(Env.mem class_def.class_name env) then error "Deux classes avec le meme nom,ou variable avec nom de classe"
-    else
-      Env.add class_def.class_name ((TClass class_def.class_name)) env
-    ) env l
-
-let get_class (l: class_def list) (class_name:string): class_def = 
+  let get_class (l: class_def list) (class_name:string): class_def = 
   try 
     List.find (fun class_d -> class_d.class_name = class_name) l
   with 
@@ -234,11 +226,11 @@ let typecheck_prog p =
         |Not_found -> error "Utilisation de this hors classe")
         
     |New cn -> 
-      (try
-        Env.find cn tenv
-      with
-        |Not_found -> error "Classe inexistante"
-      )
+        if(List.exists (fun cd -> cd.class_name = cn) p.classes) then
+          TClass cn
+        else
+          error "Classe inexistante"
+
     (* le constructeur doit exister*)
     | NewCstr (cn, el) ->
       let c = get_class p.classes cn in
@@ -278,14 +270,17 @@ let typecheck_prog p =
       List.iter (fun e -> let _ = est_sous_type (type_expr e tenv) first_type in ()) l;
       TArray first_type
 
-    |Instanceof (e, t) -> 
+    |Instanceof (e, t, estSousType) -> 
       match (type_expr e tenv) with 
-      |TClass _ -> 
+      |TClass cn1 -> 
         (match t with 
-          TClass cn -> 
-            if(Env.mem cn tenv) then TBool
-            else
-              error "instanceof : classe innexistante dans"
+          TClass cn2 -> 
+            (if(List.for_all (fun cd -> cd.class_name <> cn2) p.classes) then 
+                error "la deuxieme operande de instanceof n'est valide"
+              else 
+                if(not(est_sous_type (TClass cn1) t)) then estSousType := false;
+                TBool
+            )
           |_ -> failwith "ne doit pas arrivé (assurré par le parser)"
           )
       |_ -> error "dans : e instanceof t. e doit etre un objet"
@@ -388,8 +383,8 @@ let typecheck_prog p =
   and check_mdef m tenv  =
 
     let params = List.map (fun (id,t) -> (id,t,None)) m.params in
-    let tenv = add_env params tenv  est_sous_type type_expr in
-    let tenv = add_env m.locals tenv  est_sous_type type_expr in
+    let tenv = add_env params tenv  est_sous_type type_expr p.classes in
+    let tenv = add_env m.locals tenv est_sous_type type_expr p.classes in
 
     check_seq m.code m.return tenv ;
 
@@ -421,7 +416,6 @@ let typecheck_prog p =
         | i :: s -> return_exist i || return_seq s
   in
 
-  let tenv = add_class_env p.classes Env.empty in
-  let tenv = add_env p.globals tenv est_sous_type type_expr in
+  let tenv = add_env p.globals Env.empty est_sous_type type_expr p.classes in
   List.iter (fun c_def -> check_class c_def tenv) p.classes;
   check_seq p.main TVoid tenv 

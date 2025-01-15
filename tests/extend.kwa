@@ -17,7 +17,7 @@ class paire {
 }
 
 class triple extends paire {
-  attribute bool x,y;
+  attribute int x,y;
   attribute int z;
 
   method void constructor(int x, int y, int z) {

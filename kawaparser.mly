@@ -184,7 +184,7 @@ expression:
 // je m'inspire de java, je veut pas imposer un autre mot clé comme Array(3) 
 | NEW LBRACK RBRACK t=types_prim le=list(seq_index){ ArrayNelts (t, le) } 
 | LBRACK l=seq_expr RBRACK                        { ArrayList l }
-| e=expression INSTANCEOF id=IDENT                { Instanceof (e, TClass id) }
+| e=expression INSTANCEOF id=IDENT                { Instanceof (e, TClass id, ref true) }
 ;
 
 seq_index:
