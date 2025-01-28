@@ -139,8 +139,3 @@ E |- e1 : t1        E |- ek : tk'             tk' <: t1
 - Utilise la référence vers le booléen. Si l'objet que l'on veut vérifier n'est pas instancié, sinon remonte la hiérarchie de classes pour chercher le deuxième opérande de `instanceof`.
 
 ---
-
-## 4. Problèmes rencontrés
-- Utilisation de `List.exists` à la place de `List.forall` par erreur.
----
-
